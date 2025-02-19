@@ -150,14 +150,15 @@ def scan_images(directory):
             # Check if the city has already appeared on the same day
             existing_entry = next((entry for entry in results[folder_name] if entry['date'] == date_str and entry['city'] == city), None)
             if existing_entry:
-                # Replace if the new image is earlier
-                if date_taken < datetime.strptime(existing_entry['date'], '%Y-%m-%d'):
-                    existing_entry.update({
-                        'filename': filename,
-                        'date': date_str,
-                        'city': city,
-                        'country': country
-                    })
+                # Replace if the new image is earlier and both dates are valid
+                if date_taken and existing_entry['date'] != 'Unknown':
+                    if date_taken < datetime.strptime(existing_entry['date'], '%Y-%m-%d'):
+                        existing_entry.update({
+                            'filename': filename,
+                            'date': date_str,
+                            'city': city,
+                            'country': country
+                        })
             else:
                 results[folder_name].append({
                     'filename': filename,
