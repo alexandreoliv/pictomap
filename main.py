@@ -114,8 +114,12 @@ def scan_images(directory):
         else:
             elapsed_str = f"{int(elapsed_time // 60)}m {int(elapsed_time % 60)}s"
         
-        # Update progress for the current folder
-        print(f"Time elapsed: {elapsed_str} | Processing image {folder_index} out of {folder_image_count} in folder: {folder_name}", end='\r')
+        # Construct the progress message
+        progress_message = f"Time elapsed: {elapsed_str} | Processing image {folder_index} out of {folder_image_count} in folder: {folder_name}"
+        
+        # Clear the line before printing the new message
+        print('\r' + ' ' * 120, end='\r')  # Clear the line with a fixed width
+        print(progress_message, end='\r')
         
         # Process the image
         try:
