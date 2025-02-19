@@ -10,6 +10,7 @@ from googletrans import Translator
 import unicodedata
 import sys
 import contextlib
+import json
 
 
 def get_exif_data(image_path):
@@ -182,7 +183,15 @@ def scan_images(directory):
                 translation_count += 1  # Increment translation counter
     
     print("\nImage scanning complete.")
-    print(f"Total translations performed: {translation_count}\n")
+    print(f"Total translations performed: {translation_count}")
+    
+    # Save results as JSON to a file
+    json_filename = 'image_metadata.json'
+    with open(json_filename, 'w') as json_file:
+        json.dump(results, json_file, indent=4)
+    
+    print(f"JSON file '{json_filename}' created successfully.\n")
+    
     return results
 
 if __name__ == "__main__":
