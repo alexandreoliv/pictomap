@@ -7,6 +7,7 @@ from geopy.exc import GeocoderTimedOut
 from datetime import datetime
 import time
 from googletrans import Translator
+import unicodedata
 
 
 def get_exif_data(image_path):
@@ -63,6 +64,13 @@ def get_date_taken(tags):
     except KeyError:
         return None
 
+def is_non_latin(text):
+    """Check if the text contains non-Latin characters."""
+    for char in text:
+        if 'LATIN' not in unicodedata.name(char):
+            return True
+    return False
+
 def scan_images(directory):
     """Scan for images recursively and extract metadata."""
     print("Scanning for images...\n")
@@ -101,9 +109,11 @@ def scan_images(directory):
             city = location_info.get('city', 'Unknown')
             country = location_info.get('country', 'Unknown')
             
-            # Translate city and country to English
-            city = translator.translate(city, dest='en').text
-            country = translator.translate(country, dest='en').text
+            # Translate city and country to English if they contain non-Latin characters
+            if is_non_latin(city):
+                city = translator.translate(city, dest='en').text
+            if is_non_latin(country):
+                country = translator.translate(country, dest='en').text
             
             # Initialize folder in results if not present
             if folder_name not in results:
