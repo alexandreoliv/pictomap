@@ -79,8 +79,6 @@ def scan_images(directory):
                   glob.glob(os.path.join(directory, '**', '*.jpeg'), recursive=True)
     
     results = {}
-    translator = Translator()  # Initialize the translator
-
     current_folder = None
     folder_image_count = 0
     for index, image_path in enumerate(image_paths, start=1):
@@ -109,12 +107,6 @@ def scan_images(directory):
             city = location_info.get('city', 'Unknown')
             country = location_info.get('country', 'Unknown')
             
-            # Translate city and country to English if they contain non-Latin characters
-            if is_non_latin(city):
-                city = translator.translate(city, dest='en').text
-            if is_non_latin(country):
-                country = translator.translate(country, dest='en').text
-            
             # Initialize folder in results if not present
             if folder_name not in results:
                 results[folder_name] = []
@@ -142,7 +134,20 @@ def scan_images(directory):
     for folder in results:
         results[folder].sort(key=lambda x: x['date'])
     
+    # Translate city and country to English if they contain non-Latin characters
+    translator = Translator()  # Initialize the translator
+    translation_count = 0  # Initialize translation counter
+    for folder in results:
+        for entry in results[folder]:
+            if is_non_latin(entry['city']):
+                entry['city'] = translator.translate(entry['city'], dest='en').text
+                translation_count += 1  # Increment translation counter
+            if is_non_latin(entry['country']):
+                entry['country'] = translator.translate(entry['country'], dest='en').text
+                translation_count += 1  # Increment translation counter
+    
     print("\nImage scanning complete.")
+    print(f"Total translations performed: {translation_count}\n")
     return results
 
 if __name__ == "__main__":
@@ -153,4 +158,4 @@ if __name__ == "__main__":
         print(f"Folder: {folder}")
         for data in images:
             print(f"  Filename: {data['filename']}, Date: {data['date']}, City: {data['city']}, Country: {data['country']}")
-    print("Processing complete.")
+    print("\nProcessing complete.")
