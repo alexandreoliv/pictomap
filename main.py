@@ -82,6 +82,7 @@ def scan_images(directory):
     current_folder = None
     folder_image_count = 0
     folder_index = 0  # Initialize folder-specific index
+    start_time = time.time()  # Start the timer
     for image_path in image_paths:
         folder_name = os.path.basename(os.path.dirname(image_path))
         
@@ -92,8 +93,16 @@ def scan_images(directory):
             folder_index = 0  # Reset folder-specific index
         
         folder_index += 1  # Increment folder-specific index
+        
+        # Calculate elapsed time
+        elapsed_time = time.time() - start_time
+        if elapsed_time < 60:
+            elapsed_str = f"{int(elapsed_time)}s"
+        else:
+            elapsed_str = f"{int(elapsed_time // 60)}m {int(elapsed_time % 60)}s"
+        
         # Update progress for the current folder
-        print(f"Processing image {folder_index} out of {folder_image_count} in folder: {folder_name}", end='\r')
+        print(f"Time elapsed: {elapsed_str} | Processing image {folder_index} out of {folder_image_count} in folder: {folder_name}", end='\r')
         
         tags = get_exif_data(image_path)
         gps = get_gps_coordinates(tags)
