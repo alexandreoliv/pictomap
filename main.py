@@ -8,6 +8,8 @@ from datetime import datetime
 import time
 from googletrans import Translator
 import unicodedata
+import sys
+import contextlib
 
 
 def get_exif_data(image_path):
@@ -71,6 +73,17 @@ def is_non_latin(text):
             return True
     return False
 
+@contextlib.contextmanager
+def suppress_stderr():
+    """Context manager to suppress standard error output."""
+    with open(os.devnull, 'w') as devnull:
+        old_stderr = sys.stderr
+        sys.stderr = devnull
+        try:
+            yield
+        finally:
+            sys.stderr = old_stderr
+
 def scan_images(directory):
     """Scan for images recursively and extract metadata."""
     print("Scanning for images...\n")
@@ -104,9 +117,15 @@ def scan_images(directory):
         # Update progress for the current folder
         print(f"Time elapsed: {elapsed_str} | Processing image {folder_index} out of {folder_image_count} in folder: {folder_name}", end='\r')
         
-        tags = get_exif_data(image_path)
-        gps = get_gps_coordinates(tags)
-        date_taken = get_date_taken(tags)
+        # Process the image
+        try:
+            with suppress_stderr():
+                tags = get_exif_data(image_path)
+            gps = get_gps_coordinates(tags)
+            date_taken = get_date_taken(tags)
+        except Exception as e:
+            # Optionally log the error or handle it as needed
+            continue
         
         location_info = None
         if gps:
