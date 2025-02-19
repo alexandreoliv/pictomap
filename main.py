@@ -81,16 +81,19 @@ def scan_images(directory):
     results = {}
     current_folder = None
     folder_image_count = 0
-    for index, image_path in enumerate(image_paths, start=1):
+    folder_index = 0  # Initialize folder-specific index
+    for image_path in image_paths:
         folder_name = os.path.basename(os.path.dirname(image_path))
         
-        # Print folder name and first image processing message
+        # Reset index and count for each new folder
         if folder_name != current_folder:
             current_folder = folder_name
             folder_image_count = sum(1 for path in image_paths if os.path.basename(os.path.dirname(path)) == folder_name)
+            folder_index = 0  # Reset folder-specific index
         
+        folder_index += 1  # Increment folder-specific index
         # Update progress for the current folder
-        print(f"Processing image {index} out of {folder_image_count} in folder: {folder_name}", end='\r')
+        print(f"Processing image {folder_index} out of {folder_image_count} in folder: {folder_name}", end='\r')
         
         tags = get_exif_data(image_path)
         gps = get_gps_coordinates(tags)
