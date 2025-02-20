@@ -107,6 +107,9 @@ def scan_images(directory, precision=1):
     # Initialize location cache
     location_cache = {}
 
+    # Initialize error messages list
+    error_messages = []
+
     # Define precision accuracy mapping
     precision_accuracy = {
         0: "~111 km", # Country-level grouping
@@ -166,6 +169,7 @@ def scan_images(directory, precision=1):
                 valid_exif_count += 1
         except Exception as e:
             exif_problem_count += 1
+            error_messages.append(f"Error processing {image_path}: {str(e)}")
             continue
         
         location_info = None
@@ -181,6 +185,7 @@ def scan_images(directory, precision=1):
                     geopy_count += 1  # Increment geopy count
             except Exception as e:
                 geopy_problem_count += 1
+                error_messages.append(f"Geopy error for {image_path}: {str(e)}")
                 continue
         
         # Only consider images with either city or country
@@ -235,10 +240,11 @@ def scan_images(directory, precision=1):
         "number_of_exifs_with_problems": exif_problem_count
     }
     
-    # Combine summary and results
+    # Combine summary, results, and error messages
     output_data = {
         "summary": summary,
-        "results": results
+        "results": results,
+        "errors": error_messages
     }
     
     print("\nImage scanning complete.")
