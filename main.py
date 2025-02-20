@@ -6,8 +6,6 @@ from geopy.geocoders import Nominatim
 from geopy.exc import GeocoderTimedOut
 from datetime import datetime
 import time
-from googletrans import Translator
-import unicodedata
 import sys
 import contextlib
 import json
@@ -50,7 +48,7 @@ def get_location(lat, lon, retries=3, delay=2):
     
     for attempt in range(retries):
         try:
-            location = geolocator.reverse((lat, lon), exactly_one=True)
+            location = geolocator.reverse((lat, lon), exactly_one=True, language='en')
             return location.raw['address'] if location else None
         except GeocoderTimedOut:
             print(f"Geocoder timed out. Retrying {attempt + 1}/{retries}...")
@@ -66,13 +64,6 @@ def get_date_taken(tags):
         return datetime.strptime(date_str, "%Y:%m:%d %H:%M:%S")
     except KeyError:
         return None
-
-def is_non_latin(text):
-    """Check if the text contains non-Latin characters."""
-    for char in text:
-        if 'LATIN' not in unicodedata.name(char):
-            return True
-    return False
 
 @contextlib.contextmanager
 def suppress_stderr():
@@ -184,20 +175,8 @@ def scan_images(directory):
     for folder in results:
         results[folder].sort(key=lambda x: x['date'])
     
-    # Translate city and country to English if they contain non-Latin characters
-    translator = Translator()  # Initialize the translator
-    translation_count = 0  # Initialize translation counter
-    for folder in results:
-        for entry in results[folder]:
-            if is_non_latin(entry['city']):
-                entry['city'] = translator.translate(entry['city'], dest='en').text
-                translation_count += 1  # Increment translation counter
-            if is_non_latin(entry['country']):
-                entry['country'] = translator.translate(entry['country'], dest='en').text
-                translation_count += 1  # Increment translation counter
     
     print("\nImage scanning complete.")
-    print(f"Total translations performed: {translation_count}")
     
     # Save results as JSON to a file
     json_filename = 'image_metadata.json'
