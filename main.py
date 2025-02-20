@@ -42,9 +42,9 @@ def convert_to_degrees(value):
     d, m, s = value
     return d.num / d.den + (m.num / m.den) / 60 + (s.num / s.den) / 3600
 
-def get_location(lat, lon, geopy_timeout_count, error_messages, retries=3, delay=2):
+def get_location(lat, lon, geopy_timeout_count, error_messages, retries=3, delay=1):
     """Get city and country from GPS coordinates with retry logic."""
-    geolocator = Nominatim(user_agent="photo_exif_locator", timeout=10)
+    geolocator = Nominatim(user_agent="photo_exif_locator", timeout=2)
     
     for attempt in range(retries):
         try:
