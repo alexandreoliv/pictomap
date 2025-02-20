@@ -96,31 +96,44 @@ def scan_images(directory):
     current_folder = None
     folder_image_count = 0
     folder_index = 0  # Initialize folder-specific index
+    total_files = len(image_paths)  # Get total number of images
+    processed_files = 0  # Initialize processed files counter
     start_time = time.time()  # Start the timer
+    
     for image_path in image_paths:
         folder_name = os.path.basename(os.path.dirname(image_path))
-        
+
         # Reset index and count for each new folder
         if folder_name != current_folder:
             current_folder = folder_name
             folder_image_count = sum(1 for path in image_paths if os.path.basename(os.path.dirname(path)) == folder_name)
             folder_index = 0  # Reset folder-specific index
-        
+
         folder_index += 1  # Increment folder-specific index
-        
+        processed_files += 1  # Increment processed files
+
         # Calculate elapsed time
         elapsed_time = time.time() - start_time
-        if elapsed_time < 60:
-            elapsed_str = f"{int(elapsed_time)}s"
-        else:
-            elapsed_str = f"{int(elapsed_time // 60)}m {int(elapsed_time % 60)}s"
-        
-        # Construct the progress message
-        progress_message = f"Time elapsed: {elapsed_str} | Processing image {folder_index} out of {folder_image_count} in folder: {folder_name}"
-        
-        # Clear the line before printing the new message
-        print('\r' + ' ' * 120, end='\r')  # Clear the line with a fixed width
-        print(progress_message, end='\r')
+        hours = int(elapsed_time // 3600)
+        minutes = int((elapsed_time % 3600) // 60)
+        seconds = int(elapsed_time % 60)
+
+        elapsed_str = f"{hours}h {minutes}m {seconds}s" if hours > 0 else f"{minutes}m {seconds}s" if minutes > 0 else f"{seconds}s"
+
+        # Calculate progress percentage
+        progress_percentage = (processed_files / total_files) * 100
+
+        # Create a visually appealing progress message
+        progress_message = (
+            f"\033[1;34m⏳ Time elapsed:\033[0m {elapsed_str}  |  "  # Bold blue time
+            f"\033[1;32m✅ Processed:\033[0m {processed_files}/{total_files} ({progress_percentage:.2f}%)  |  "  # Bold green processed count
+            f"\033[1;36m📂 Folder:\033[0m {folder_name}  |  "  # Bold cyan folder
+            f"\033[1;33m📷 Image:\033[0m {folder_index}/{folder_image_count}"  # Bold yellow image count
+        )
+
+        # Print single-line updating message (overwrite previous)
+        print('\r' + ' ' * 180, end='\r')  # Clear previous output
+        print(progress_message, end='\r', flush=True)  # Overwrite previous line
         
         # Process the image
         try:
