@@ -152,7 +152,7 @@ def scan_images(directory, precision=1):
         )
 
         # Print single-line updating message (overwrite previous)
-        print('\r' + ' ' * 180, end='\r')  # Clear previous output
+        print('\r' + ' ' * 190, end='\r')  # Clear previous output
         print(progress_message, end='\r', flush=True)  # Overwrite previous line
         
         # Process the image
