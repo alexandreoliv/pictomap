@@ -142,12 +142,25 @@ def scan_images(directory, precision=1):
 
         elapsed_str = f"{hours}h {minutes}m {seconds}s" if hours > 0 else f"{minutes}m {seconds}s" if minutes > 0 else f"{seconds}s"
 
+        # Estimate remaining time
+        if processed_files > 0:
+            avg_time_per_file = elapsed_time / processed_files
+            remaining_files = total_files - processed_files
+            remaining_time = avg_time_per_file * remaining_files
+            rem_hours = int(remaining_time // 3600)
+            rem_minutes = int((remaining_time % 3600) // 60)
+            rem_seconds = int(remaining_time % 60)
+            remaining_str = f"{rem_hours}h {rem_minutes}m {rem_seconds}s" if rem_hours > 0 else f"{rem_minutes}m {rem_seconds}s" if rem_minutes > 0 else f"{rem_seconds}s"
+        else:
+            remaining_str = "Calculating..."
+
         # Calculate progress percentage
         progress_percentage = (processed_files / total_files) * 100
 
         # Create a visually appealing progress message
         progress_message = (
-            f"\033[1;34m⏳ Time elapsed:\033[0m {elapsed_str}  |  "  # Bold blue time
+            f"\033[1;34m⏳ Time elapsed:\033[0m {elapsed_str}  |  "  # Bold blue time with fixed width
+            f"\033[1;31m⏳ Remaining:\033[0m {remaining_str}  |  "  # Bold red remaining time with fixed width
             f"\033[1;35m🌍 Precision:\033[0m {precision} ({precision_accuracy.get(precision, 'Unknown')})  |  "  # Bold magenta precision
             f"\033[1;32m✅ Processed:\033[0m {processed_files}/{total_files} ({progress_percentage:.2f}%)  |  "  # Bold green processed count
             f"\033[1;36m📂 Folder:\033[0m {folder_name}  |  "  # Bold cyan folder
