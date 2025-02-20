@@ -98,6 +98,9 @@ def scan_images(directory):
     valid_exif_count = 0
     exif_problem_count = 0
 
+    # Initialize location cache
+    location_cache = {}
+
     for image_path in image_paths:
         folder_name = os.path.basename(os.path.dirname(image_path))
 
@@ -149,8 +152,13 @@ def scan_images(directory):
         location_info = None
         if gps:
             try:
-                location_info = get_location(*gps)
-                geopy_count += 1  # Increment geopy count
+                if gps in location_cache:
+                    location_info = location_cache[gps]  # Use cached location
+                else:
+                    location_info = get_location(*gps)
+                    if location_info:
+                        location_cache[gps] = location_info  # Store result in cache
+                    geopy_count += 1  # Increment geopy count
             except Exception as e:
                 geopy_problem_count += 1
                 continue
