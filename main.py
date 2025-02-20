@@ -185,6 +185,7 @@ def scan_images(directory, precision=1):
         if location_info and (location_info.get('city') or location_info.get('country')):
             filename = os.path.basename(image_path)
             date_str = date_taken.strftime('%Y-%m-%d') if date_taken else 'Unknown'
+            time_str = date_taken.strftime('%H:%M:%S') if date_taken else 'Unknown'
             city = location_info.get('city', 'Unknown')
             country = location_info.get('country', 'Unknown')
             
@@ -197,10 +198,11 @@ def scan_images(directory, precision=1):
             if existing_entry:
                 # Replace if the new image is earlier and both dates are valid
                 if date_taken and existing_entry['date'] != 'Unknown':
-                    if date_taken < datetime.strptime(existing_entry['date'], '%Y-%m-%d'):
+                    if date_taken < datetime.strptime(existing_entry['date'] + ' ' + existing_entry.get('time', '00:00:00'), '%Y-%m-%d %H:%M:%S'):
                         existing_entry.update({
                             'filename': filename,
                             'date': date_str,
+                            'time': time_str,
                             'city': city,
                             'country': country
                         })
@@ -208,13 +210,14 @@ def scan_images(directory, precision=1):
                 results[folder_name].append({
                     'filename': filename,
                     'date': date_str,
+                    'time': time_str,
                     'city': city,
                     'country': country
                 })
     
-    # Sort images in each folder by date
+    # Sort images in each folder by date and time
     for folder in results:
-        results[folder].sort(key=lambda x: x['date'])
+        results[folder].sort(key=lambda x: (x['date'], x['time']))
     
     
     print("\nImage scanning complete.")
@@ -244,5 +247,5 @@ if __name__ == "__main__":
     for folder, images in image_data.items():
         print(f"Folder: {folder}")
         for data in images:
-            print(f"  Filename: {data['filename']}, Date: {data['date']}, City: {data['city']}, Country: {data['country']}")
-    print("\nProcessing complete.")
+            print(f"  Filename: {data['filename']}, Date: {data['date']}, Time: {data['time']}, City: {data['city']}, Country: {data['country']}, Coordinates: {data['coordinates']}")
+    print("Processing complete.")
