@@ -98,6 +98,9 @@ def scan_images(directory, precision=1):
     processed_files = 0  # Initialize processed files counter
     start_time = time.time()  # Start the timer
 
+    # Initialize elapsed_str to handle cases with no images
+    elapsed_str = "0s"
+
     # Initialize counters
     geopy_count = 0
     geopy_error_count = 0
