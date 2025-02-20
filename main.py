@@ -204,7 +204,8 @@ def scan_images(directory, precision=1):
                             'date': date_str,
                             'time': time_str,
                             'city': city,
-                            'country': country
+                            'country': country,
+                            'coordinates': gps
                         })
             else:
                 results[folder_name].append({
@@ -212,20 +213,38 @@ def scan_images(directory, precision=1):
                     'date': date_str,
                     'time': time_str,
                     'city': city,
-                    'country': country
+                    'country': country,
+                    'coordinates': gps
                 })
     
     # Sort images in each folder by date and time
     for folder in results:
         results[folder].sort(key=lambda x: (x['date'], x['time']))
     
+    # Prepare summary data
+    summary = {
+        "total_running_time": elapsed_str,
+        "total_geopy_calls": geopy_count,
+        "total_geopy_problems": geopy_problem_count,
+        "original_number_of_files": total_files,
+        "number_of_jpg_and_jpeg_files": total_files,
+        "number_of_jpg_and_jpeg_files_with_exif": exif_count,
+        "number_of_jpg_and_jpeg_files_with_valid_exif": valid_exif_count,
+        "number_of_exifs_with_problems": exif_problem_count
+    }
+    
+    # Combine summary and results
+    output_data = {
+        "summary": summary,
+        "results": results
+    }
     
     print("\nImage scanning complete.")
     
     # Save results as JSON to a file
     json_filename = 'image_metadata.json'
     with open(json_filename, 'w') as json_file:
-        json.dump(results, json_file, indent=4)
+        json.dump(output_data, json_file, indent=4)
     
     print(f"JSON file '{json_filename}' created successfully.\n")
 
@@ -248,4 +267,4 @@ if __name__ == "__main__":
         print(f"Folder: {folder}")
         for data in images:
             print(f"  Filename: {data['filename']}, Date: {data['date']}, Time: {data['time']}, City: {data['city']}, Country: {data['country']}, Coordinates: {data['coordinates']}")
-    print("Processing complete.")
+    print("\nProcessing complete.")
