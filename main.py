@@ -90,7 +90,14 @@ def scan_images(directory):
     total_files = len(image_paths)  # Get total number of images
     processed_files = 0  # Initialize processed files counter
     start_time = time.time()  # Start the timer
-    
+
+    # Initialize counters
+    geopy_count = 0
+    geopy_problem_count = 0
+    exif_count = 0
+    valid_exif_count = 0
+    exif_problem_count = 0
+
     for image_path in image_paths:
         folder_name = os.path.basename(os.path.dirname(image_path))
 
@@ -130,15 +137,23 @@ def scan_images(directory):
         try:
             with suppress_stderr():
                 tags = get_exif_data(image_path)
+            exif_count += 1
             gps = get_gps_coordinates(tags)
             date_taken = get_date_taken(tags)
+            if gps or date_taken:
+                valid_exif_count += 1
         except Exception as e:
-            # Optionally log the error or handle it as needed
+            exif_problem_count += 1
             continue
         
         location_info = None
         if gps:
-            location_info = get_location(*gps)
+            try:
+                location_info = get_location(*gps)
+                geopy_count += 1  # Increment geopy count
+            except Exception as e:
+                geopy_problem_count += 1
+                continue
         
         # Only consider images with either city or country
         if location_info and (location_info.get('city') or location_info.get('country')):
@@ -184,6 +199,15 @@ def scan_images(directory):
         json.dump(results, json_file, indent=4)
     
     print(f"JSON file '{json_filename}' created successfully.\n")
+
+    print(f"Total running time: {elapsed_str}")
+    print(f"Total Geopy calls made: {geopy_count}")
+    print(f"Total Geopy problems encountered: {geopy_problem_count}")
+    print(f"Original number of files: {total_files}")
+    print(f"Number of .jpg and .jpeg files: {total_files}")
+    print(f"Number of .jpg and .jpeg files with EXIF: {exif_count}")
+    print(f"Number of .jpg and .jpeg files with valid EXIF: {valid_exif_count}")
+    print(f"Number of EXIFs with problems: {exif_problem_count}\n")
     
     return results
 
