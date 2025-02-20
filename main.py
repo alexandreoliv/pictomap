@@ -85,7 +85,9 @@ def scan_images(directory, precision=1):
     print("Scanning for images...\n")
 
     image_paths = glob.glob(os.path.join(directory, '**', '*.jpg'), recursive=True) + \
-                  glob.glob(os.path.join(directory, '**', '*.jpeg'), recursive=True)
+                  glob.glob(os.path.join(directory, '**', '*.jpeg'), recursive=True) + \
+                  glob.glob(os.path.join(directory, '**', '*.JPG'), recursive=True) + \
+                  glob.glob(os.path.join(directory, '**', '*.JPEG'), recursive=True)
     
     results = {}
     current_folder = None
