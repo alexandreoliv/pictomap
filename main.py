@@ -2,14 +2,18 @@ import os
 import glob
 import exifread
 from PIL import Image
-from geopy.geocoders import Nominatim
-from geopy.exc import GeocoderTimedOut
 from datetime import datetime
 import time
 import sys
 import contextlib
 import json
+from opencage.geocoder import OpenCageGeocode
+from dotenv import load_dotenv
 
+# Load environment variables from .env file
+load_dotenv()
+
+OPENCAGE_API_KEY = os.getenv('OPENCAGE_API_KEY')
 
 def get_exif_data(image_path):
     """Extract EXIF data from an image."""
@@ -42,21 +46,23 @@ def convert_to_degrees(value):
     d, m, s = value
     return d.num / d.den + (m.num / m.den) / 60 + (s.num / s.den) / 3600
 
-def get_location(lat, lon, geopy_timeout_count, error_messages, retries=3, delay=1):
-    """Get city and country from GPS coordinates with retry logic."""
-    geolocator = Nominatim(user_agent="photo_exif_locator", timeout=2)
+def get_location(lat, lon, geocoder_timeout_count, error_messages, retries=3, delay=1):
+    """Get city and country from GPS coordinates using OpenCage."""
+    geocoder = OpenCageGeocode(OPENCAGE_API_KEY)
     
     for attempt in range(retries):
         try:
-            location = geolocator.reverse((lat, lon), exactly_one=True, language='en')
-            return location.raw['address'] if location else None, geopy_timeout_count
-        except GeocoderTimedOut:
-            geopy_timeout_count += 1
-            error_messages.append(f"Timeout error for coordinates ({lat}, {lon}) on attempt {attempt + 1}/{retries}.")
+            results = geocoder.reverse_geocode(lat, lon, language='en')
+            if results:
+                location = results[0]
+                return location['components'], geocoder_timeout_count
+        except Exception as e:
+            geocoder_timeout_count += 1
+            error_messages.append(f"Error for coordinates ({lat}, {lon}) on attempt {attempt + 1}/{retries}: {str(e)}")
             time.sleep(delay)
     
     error_messages.append(f"Geocoder failed after multiple attempts for coordinates ({lat}, {lon}).")
-    return None, geopy_timeout_count
+    return None, geocoder_timeout_count
 
 def get_date_taken(tags):
     """Extract date taken from EXIF tags."""
@@ -78,7 +84,7 @@ def suppress_stderr():
             sys.stderr = old_stderr
 
 def round_coordinates(lat, lon, precision=1):
-    """Round GPS coordinates to reduce redundant GeoPy calls."""
+    """Round GPS coordinates to reduce redundant Geocoder calls."""
     return round(lat, precision), round(lon, precision)
 
 def scan_images(directory, precision=1):
@@ -102,9 +108,9 @@ def scan_images(directory, precision=1):
     elapsed_str = "0s"
 
     # Initialize counters
-    geopy_count = 0
-    geopy_error_count = 0
-    geopy_timeout_count = 0
+    geocoder_count = 0
+    geocoder_error_count = 0
+    geocoder_timeout_count = 0
     extracted_exif_count = 0
     exif_error_count = 0
 
@@ -198,13 +204,13 @@ def scan_images(directory, precision=1):
                 if rounded_gps in location_cache:
                     location_info = location_cache[rounded_gps]  # Use cached location
                 else:
-                    location_info, geopy_timeout_count = get_location(*gps, geopy_timeout_count, error_messages)  # Update geopy_timeout_count
+                    location_info, geocoder_timeout_count = get_location(*gps, geocoder_timeout_count, error_messages)  # Update geocoder_timeout_count
                     if location_info:
                         location_cache[rounded_gps] = location_info  # Store in cache
-                    geopy_count += 1  # Increment geopy count
+                    geocoder_count += 1  # Increment geocoder count
             except Exception as e:
-                geopy_error_count += 1
-                error_messages.append(f"GeoPy error for {image_path}: {str(e)}")
+                geocoder_error_count += 1
+                error_messages.append(f"Geocoder error for {image_path}: {str(e)}")
                 continue
         
         # Only consider images with either city or country
@@ -250,9 +256,9 @@ def scan_images(directory, precision=1):
     # Prepare summary data
     summary = {
         "total_running_time": elapsed_str,
-        "geopy_calls": geopy_count,
-        "geopy_errors": geopy_error_count,
-        "geopy_timeouts": geopy_timeout_count,
+        "geocoder_calls": geocoder_count,
+        "geocoder_errors": geocoder_error_count,
+        "geocoder_timeouts": geocoder_timeout_count,
         "original_number_of_files": total_files,
         "files_with_extracted_exif": extracted_exif_count,
         "extracted_exifs_with_errors": exif_error_count
@@ -275,9 +281,9 @@ def scan_images(directory, precision=1):
     print(f"JSON file '{json_filename}' created successfully.\n")
 
     print(f"Total running time: {elapsed_str}")
-    print(f"GeoPy calls made: {geopy_count}")
-    print(f"GeoPy errors: {geopy_error_count}")
-    print(f"GeoPy timeouts: {geopy_timeout_count}")
+    print(f"Geocoder calls made: {geocoder_count}")
+    print(f"Geocoder errors: {geocoder_error_count}")
+    print(f"Geocoder timeouts: {geocoder_timeout_count}")
     print(f"Original number of files: {total_files}")
     print(f"Files with extracted EXIF: {extracted_exif_count}")
     print(f"Extracted EXIFs with errors: {exif_error_count}\n")
