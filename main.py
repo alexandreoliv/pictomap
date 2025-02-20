@@ -76,7 +76,11 @@ def suppress_stderr():
         finally:
             sys.stderr = old_stderr
 
-def scan_images(directory):
+def round_coordinates(lat, lon, precision=1):
+    """Round GPS coordinates to reduce redundant Geopy calls."""
+    return round(lat, precision), round(lon, precision)
+
+def scan_images(directory, precision=1):
     """Scan for images recursively and extract metadata."""
     print("Scanning for images...\n")
 
@@ -100,6 +104,18 @@ def scan_images(directory):
 
     # Initialize location cache
     location_cache = {}
+
+    # Define precision accuracy mapping
+    precision_accuracy = {
+        0: "~111 km", # Country-level grouping
+        1: "~11.1 km", # City-level grouping
+        2: "~1.11 km", # Large neighborhood grouping
+        3: "~111 m", # Small neighborhood grouping
+        4: "~11.1 m", # Street-level grouping
+        5: "~1.11 m", # Individual building grouping
+        6: "~0.11 m", # Precise GPS location, close to consumer GPS accuracy
+        7: "Less than 1 cm" # Extremely fine precision, mostly unnecessary
+    }
 
     for image_path in image_paths:
         folder_name = os.path.basename(os.path.dirname(image_path))
@@ -127,6 +143,7 @@ def scan_images(directory):
         # Create a visually appealing progress message
         progress_message = (
             f"\033[1;34m⏳ Time elapsed:\033[0m {elapsed_str}  |  "  # Bold blue time
+            f"\033[1;35m🌍 Precision:\033[0m {precision} ({precision_accuracy.get(precision, 'Unknown')})  |  "  # Bold magenta precision
             f"\033[1;32m✅ Processed:\033[0m {processed_files}/{total_files} ({progress_percentage:.2f}%)  |  "  # Bold green processed count
             f"\033[1;36m📂 Folder:\033[0m {folder_name}  |  "  # Bold cyan folder
             f"\033[1;33m📷 Image:\033[0m {folder_index}/{folder_image_count}"  # Bold yellow image count
@@ -152,12 +169,13 @@ def scan_images(directory):
         location_info = None
         if gps:
             try:
-                if gps in location_cache:
-                    location_info = location_cache[gps]  # Use cached location
+                rounded_gps = round_coordinates(*gps, precision=precision)  # Round the GPS coordinates
+                if rounded_gps in location_cache:
+                    location_info = location_cache[rounded_gps]  # Use cached location
                 else:
                     location_info = get_location(*gps)
                     if location_info:
-                        location_cache[gps] = location_info  # Store result in cache
+                        location_cache[rounded_gps] = location_info  # Store in cache
                     geopy_count += 1  # Increment geopy count
             except Exception as e:
                 geopy_problem_count += 1
