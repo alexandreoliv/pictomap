@@ -42,20 +42,21 @@ def convert_to_degrees(value):
     d, m, s = value
     return d.num / d.den + (m.num / m.den) / 60 + (s.num / s.den) / 3600
 
-def get_location(lat, lon, retries=3, delay=2):
+def get_location(lat, lon, geopy_timeout_count, error_messages, retries=3, delay=2):
     """Get city and country from GPS coordinates with retry logic."""
     geolocator = Nominatim(user_agent="photo_exif_locator", timeout=10)
     
     for attempt in range(retries):
         try:
             location = geolocator.reverse((lat, lon), exactly_one=True, language='en')
-            return location.raw['address'] if location else None
+            return location.raw['address'] if location else None, geopy_timeout_count
         except GeocoderTimedOut:
-            print(f"Geocoder timed out. Retrying {attempt + 1}/{retries}...")
+            geopy_timeout_count += 1
+            error_messages.append(f"Timeout error for coordinates ({lat}, {lon}) on attempt {attempt + 1}/{retries}.")
             time.sleep(delay)
     
-    print("Geocoder failed after multiple attempts.")
-    return None
+    error_messages.append(f"Geocoder failed after multiple attempts for coordinates ({lat}, {lon}).")
+    return None, geopy_timeout_count
 
 def get_date_taken(tags):
     """Extract date taken from EXIF tags."""
@@ -77,7 +78,7 @@ def suppress_stderr():
             sys.stderr = old_stderr
 
 def round_coordinates(lat, lon, precision=1):
-    """Round GPS coordinates to reduce redundant Geopy calls."""
+    """Round GPS coordinates to reduce redundant GeoPy calls."""
     return round(lat, precision), round(lon, precision)
 
 def scan_images(directory, precision=1):
@@ -99,10 +100,10 @@ def scan_images(directory, precision=1):
 
     # Initialize counters
     geopy_count = 0
-    geopy_problem_count = 0
-    exif_count = 0
-    valid_exif_count = 0
-    exif_problem_count = 0
+    geopy_error_count = 0
+    geopy_timeout_count = 0
+    extracted_exif_count = 0
+    exif_error_count = 0
 
     # Initialize location cache
     location_cache = {}
@@ -122,8 +123,11 @@ def scan_images(directory, precision=1):
         7: "Less than 1 cm" # Extremely fine precision, mostly unnecessary
     }
 
+    max_folder_name_length = 15  # Limit folder name to 15 characters
+
     for image_path in image_paths:
         folder_name = os.path.basename(os.path.dirname(image_path))
+        folder_name_display = (folder_name[:max_folder_name_length] + '...') if len(folder_name) > max_folder_name_length else folder_name
 
         # Reset index and count for each new folder
         if folder_name != current_folder:
@@ -163,7 +167,7 @@ def scan_images(directory, precision=1):
             f"\033[1;31m⏳ Remaining:\033[0m {remaining_str}  |  "  # Bold red remaining time with fixed width
             f"\033[1;35m🌍 Precision:\033[0m {precision} ({precision_accuracy.get(precision, 'Unknown')})  |  "  # Bold magenta precision
             f"\033[1;32m✅ Processed:\033[0m {processed_files}/{total_files} ({progress_percentage:.2f}%)  |  "  # Bold green processed count
-            f"\033[1;36m📂 Folder:\033[0m {folder_name}  |  "  # Bold cyan folder
+            f"\033[1;36m📂 Folder:\033[0m {folder_name_display}  |  "  # Bold cyan folder
             f"\033[1;33m📷 Image:\033[0m {folder_index}/{folder_image_count}"  # Bold yellow image count
         )
 
@@ -175,13 +179,12 @@ def scan_images(directory, precision=1):
         try:
             with suppress_stderr():
                 tags = get_exif_data(image_path)
-            exif_count += 1
             gps = get_gps_coordinates(tags)
             date_taken = get_date_taken(tags)
             if gps or date_taken:
-                valid_exif_count += 1
+                extracted_exif_count += 1
         except Exception as e:
-            exif_problem_count += 1
+            exif_error_count += 1
             error_messages.append(f"Error processing {image_path}: {str(e)}")
             continue
         
@@ -192,13 +195,13 @@ def scan_images(directory, precision=1):
                 if rounded_gps in location_cache:
                     location_info = location_cache[rounded_gps]  # Use cached location
                 else:
-                    location_info = get_location(*gps)
+                    location_info, geopy_timeout_count = get_location(*gps, geopy_timeout_count, error_messages)  # Update geopy_timeout_count
                     if location_info:
                         location_cache[rounded_gps] = location_info  # Store in cache
                     geopy_count += 1  # Increment geopy count
             except Exception as e:
-                geopy_problem_count += 1
-                error_messages.append(f"Geopy error for {image_path}: {str(e)}")
+                geopy_error_count += 1
+                error_messages.append(f"GeoPy error for {image_path}: {str(e)}")
                 continue
         
         # Only consider images with either city or country
@@ -244,13 +247,12 @@ def scan_images(directory, precision=1):
     # Prepare summary data
     summary = {
         "total_running_time": elapsed_str,
-        "total_geopy_calls": geopy_count,
-        "total_geopy_problems": geopy_problem_count,
+        "geopy_calls": geopy_count,
+        "geopy_errors": geopy_error_count,
+        "geopy_timeouts": geopy_timeout_count,
         "original_number_of_files": total_files,
-        "number_of_jpg_and_jpeg_files": total_files,
-        "number_of_jpg_and_jpeg_files_with_exif": exif_count,
-        "number_of_jpg_and_jpeg_files_with_valid_exif": valid_exif_count,
-        "number_of_exifs_with_problems": exif_problem_count
+        "files_with_extracted_exif": extracted_exif_count,
+        "extracted_exifs_with_errors": exif_error_count
     }
     
     # Combine summary, results, and error messages
@@ -260,7 +262,7 @@ def scan_images(directory, precision=1):
         "errors": error_messages
     }
     
-    print("\nImage scanning complete.")
+    print("\n\nImage scanning complete.")
     
     # Save results as JSON to a file
     json_filename = 'image_metadata.json'
@@ -270,13 +272,12 @@ def scan_images(directory, precision=1):
     print(f"JSON file '{json_filename}' created successfully.\n")
 
     print(f"Total running time: {elapsed_str}")
-    print(f"Total Geopy calls made: {geopy_count}")
-    print(f"Total Geopy problems encountered: {geopy_problem_count}")
+    print(f"GeoPy calls made: {geopy_count}")
+    print(f"GeoPy errors: {geopy_error_count}")
+    print(f"GeoPy timeouts: {geopy_timeout_count}")
     print(f"Original number of files: {total_files}")
-    print(f"Number of .jpg and .jpeg files: {total_files}")
-    print(f"Number of .jpg and .jpeg files with EXIF: {exif_count}")
-    print(f"Number of .jpg and .jpeg files with valid EXIF: {valid_exif_count}")
-    print(f"Number of EXIFs with problems: {exif_problem_count}\n")
+    print(f"Files with extracted EXIF: {extracted_exif_count}")
+    print(f"Extracted EXIFs with errors: {exif_error_count}\n")
     
     return results
 
@@ -284,8 +285,4 @@ if __name__ == "__main__":
     directory = "/home/alex/Downloads/photos/doha"
     print(f"Starting scan in directory: {directory}")
     image_data = scan_images(directory)
-    for folder, images in image_data.items():
-        print(f"Folder: {folder}")
-        for data in images:
-            print(f"  Filename: {data['filename']}, Date: {data['date']}, Time: {data['time']}, City: {data['city']}, Country: {data['country']}, Coordinates: {data['coordinates']}")
-    print("\nProcessing complete.")
+    print("Processing complete.")
