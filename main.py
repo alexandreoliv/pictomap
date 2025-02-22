@@ -52,7 +52,7 @@ def get_location(lat, lon, geocoder_timeout_count, error_messages, retries=3, de
     
     for attempt in range(retries):
         try:
-            results = geocoder.reverse_geocode(lat, lon, language='en')
+            results = geocoder.reverse_geocode(lat, lon, language='en', no_annotations='1')
             if results:
                 location = results[0]
                 return location['components'], geocoder_timeout_count
