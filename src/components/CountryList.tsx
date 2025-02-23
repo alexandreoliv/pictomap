@@ -17,13 +17,13 @@ interface CountryData {
 }
 
 interface CountryListProps {
-	countries: CountryData;
+	results: CountryData;
 }
 
-function CountryList({ countries }: CountryListProps) {
+function CountryList({ results }: CountryListProps) {
 	return (
 		<ListContainer>
-			{Object.entries(countries).map(
+			{Object.entries(results).map(
 				([country, { first_visit_date, cities }]) => (
 					<Country
 						key={country}
