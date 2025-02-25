@@ -19,14 +19,15 @@ const FirstVisitDate = styled.p`
 	font-size: 0.9em;
 `;
 
-interface CityData {
-	[city: string]: number;
+interface City {
+	name: string;
+	visits: number;
 }
 
 interface CountryProps {
 	name: string;
 	firstVisitDate: string;
-	cities: CityData;
+	cities: City[];
 }
 
 function Country({ name, firstVisitDate, cities }: CountryProps) {
@@ -34,8 +35,8 @@ function Country({ name, firstVisitDate, cities }: CountryProps) {
 		<CountryContainer>
 			<CountryHeader>{name}</CountryHeader>
 			<FirstVisitDate>First Visit: {firstVisitDate}</FirstVisitDate>
-			{Object.entries(cities).map(([city, days]) => (
-				<City key={city} name={city} days={days} />
+			{cities.map((city) => (
+				<City key={city.name} name={city.name} days={city.visits} />
 			))}
 		</CountryContainer>
 	);

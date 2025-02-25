@@ -5,34 +5,36 @@ const ListContainer = styled.div`
 	margin: 20px 0;
 `;
 
-interface CityData {
-	[city: string]: number;
+interface City {
+	name: string;
+	visits: number;
 }
 
-interface CountryData {
-	[country: string]: {
-		first_visit_date: string;
-		cities: CityData;
-	};
+interface Country {
+	name: string;
+	first_visit_date: string;
+	cities: City[];
+}
+
+interface CountrySummary {
+	countries: Country[];
 }
 
 interface CountryListProps {
-	results: CountryData;
+	results: CountrySummary;
 }
 
 function CountryList({ results }: CountryListProps) {
 	return (
 		<ListContainer>
-			{Object.entries(results).map(
-				([country, { first_visit_date, cities }]) => (
-					<Country
-						key={country}
-						name={country}
-						firstVisitDate={first_visit_date}
-						cities={cities}
-					/>
-				)
-			)}
+			{results.countries.map((country) => (
+				<Country
+					key={country.name}
+					name={country.name}
+					firstVisitDate={country.first_visit_date}
+					cities={country.cities}
+				/>
+			))}
 		</ListContainer>
 	);
 }
