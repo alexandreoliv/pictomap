@@ -366,20 +366,20 @@ def scan_images(directory, precision=1):
     
     return output_data
 
-if __name__ == "__main__":
-    directory = "/home/alex/Downloads/photos"
-    print(f"Starting scan in directory: {directory}")
-    image_data = scan_images(directory)
-    
-    # Generate summary based on the image data
-    summary_data = generate_summary(image_data)
-    
-    # Save both outputs
-    save_results(image_data, summary_data, 'public/output')
-    
-    print("Processing complete.")
-    
-    # Launch npm run dev (non-detached but silent)
+def check_valid_json_files(file_paths):
+    """Check if all specified JSON files exist and are valid."""
+    for file_path in file_paths:
+        if not os.path.exists(file_path):
+            return False
+        try:
+            with open(file_path, 'r') as f:
+                json.load(f)
+        except json.JSONDecodeError:
+            return False
+    return True
+
+def start_dev_server():
+    """Start the development server and display URL."""
     print("\nStarting development server...")
 
     try:
@@ -423,3 +423,36 @@ if __name__ == "__main__":
         print("\nStopping development server...")
         npm_process.terminate()
         print("Server stopped.")
+
+if __name__ == "__main__":
+    # Define output file paths
+    output_file = 'public/output.json'
+    summary_file = 'public/output_summary.json'
+    
+    # Check if files exist and are valid
+    files_exist = check_valid_json_files([output_file, summary_file])
+    
+    # Ask if processing should be redone
+    process_again = False
+    if files_exist:
+        response = input(f"Valid data files found. Process images again? (y/N): ").strip().lower()
+        process_again = response in ['y', 'yes']
+    else:
+        print("No valid data files found. Processing is required.")
+        process_again = True
+    
+    if process_again:
+        directory = "/home/alex/Downloads/photos"
+        print(f"Starting scan in directory: {directory}")
+        image_data = scan_images(directory)
+        
+        # Generate summary based on the image data
+        summary_data = generate_summary(image_data)
+        
+        # Save both outputs
+        save_results(image_data, summary_data, 'public/output')
+        
+        print("Processing complete.")
+    
+    # Start the development server
+    start_dev_server()
