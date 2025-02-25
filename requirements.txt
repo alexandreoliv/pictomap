@@ -1,5 +1,6 @@
-Pillow
-exifread
-geopy
-opencage
-python-dotenv
+Pillow==11.1.0
+exifread==3.0.0
+opencage==3.0.4
+python-dotenv==1.0.1
+pyfiglet==1.0.2
+termcolor==2.5.0

@@ -11,6 +11,8 @@ from opencage.geocoder import OpenCageGeocode
 from dotenv import load_dotenv
 import subprocess
 import platform
+from pyfiglet import figlet_format
+from termcolor import colored
 
 # Load environment variables from .env file
 load_dotenv()
@@ -424,7 +426,15 @@ def start_dev_server():
         npm_process.terminate()
         print("Server stopped.")
 
+def display_app_title():
+    """Display ASCII art title for the application using termcolor."""
+    print(colored(figlet_format("PicToMap"), color="magenta"))
+    print(colored("Photo metadata extraction and mapping tool", color="magenta", attrs=["bold"]), "\n")
+
 if __name__ == "__main__":
+    # Display the application title
+    display_app_title()
+    
     # Define output file paths
     output_file = 'public/output.json'
     summary_file = 'public/output_summary.json'
