@@ -9,6 +9,8 @@ import json
 from collections import defaultdict
 from opencage.geocoder import OpenCageGeocode
 from dotenv import load_dotenv
+import subprocess
+import platform
 
 # Load environment variables from .env file
 load_dotenv()
@@ -376,3 +378,48 @@ if __name__ == "__main__":
     save_results(image_data, summary_data, 'public/output')
     
     print("Processing complete.")
+    
+    # Launch npm run dev (non-detached but silent)
+    print("\nStarting development server...")
+
+    try:
+        # Different approach based on OS
+        if platform.system() == "Windows":
+            # Windows - redirect to NUL
+            npm_process = subprocess.Popen(
+                "npm run dev", 
+                shell=True, 
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                cwd=os.getcwd()
+            )
+        else:
+            # Unix-like systems (Linux/macOS) - redirect to /dev/null
+            npm_process = subprocess.Popen(
+                "npm run dev", 
+                shell=True, 
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                cwd=os.getcwd()
+            )
+        
+        # ANSI colour codes for terminal formatting
+        ARROW_COLOR = '\033[92m'  # Green
+        BASE_COLOR = '\033[36m'   # Teal/cyan
+        BOLD_COLOR = '\033[1;36m' # Bold teal/cyan
+        RESET = '\033[0m'
+
+        # Format the URL with separate color sections
+        formatted_url = f"  {ARROW_COLOR}➜{RESET}  Ready at:   {BASE_COLOR}http://localhost:{BOLD_COLOR}5173{BASE_COLOR}/{RESET}\n"
+        
+        print(f"Development server started.")
+        print(formatted_url)
+        print("Press Ctrl+C to stop the server and exit.")
+        
+        # Keep the script running until interrupted
+        npm_process.wait()
+        
+    except KeyboardInterrupt:
+        print("\nStopping development server...")
+        npm_process.terminate()
+        print("Server stopped.")
