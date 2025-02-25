@@ -118,7 +118,7 @@ function App() {
 
 	return (
 		<AppContainer>
-			<Title>Image Metadata Viewer</Title>
+			<Title>PicToMap</Title>
 			{mapData && mapData.folders ? (
 				<MapContainer
 					center={mapCenter}
