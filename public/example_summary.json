@@ -1,0 +1,44 @@
+{
+	"countries": [
+		{
+			"name": "Japan",
+			"first_visit_date": "2017-08-13",
+			"cities": [
+				{
+					"name": "Kyoto",
+					"visits": 1
+				}
+			]
+		},
+		{
+			"name": "Turkey",
+			"first_visit_date": "2018-03-08",
+			"cities": [
+				{
+					"name": "Istanbul",
+					"visits": 1
+				}
+			]
+		},
+		{
+			"name": "Thailand",
+			"first_visit_date": "2020-05-30",
+			"cities": [
+				{
+					"name": "Bangkok",
+					"visits": 1
+				}
+			]
+		},
+		{
+			"name": "Czech Republic",
+			"first_visit_date": "2021-06-10",
+			"cities": [
+				{
+					"name": "Prague",
+					"visits": 1
+				}
+			]
+		}
+	]
+}
