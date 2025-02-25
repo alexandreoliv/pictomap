@@ -1,12 +1,12 @@
 import os
 import glob
 import exifread
-from PIL import Image
 from datetime import datetime
 import time
 import sys
 import contextlib
 import json
+from collections import defaultdict
 from opencage.geocoder import OpenCageGeocode
 from dotenv import load_dotenv
 
@@ -86,6 +86,79 @@ def suppress_stderr():
 def round_coordinates(lat, lon, precision=1):
     """Round GPS coordinates to reduce redundant Geocoder calls."""
     return round(lat, precision), round(lon, precision)
+
+def count_days_in_cities(data):
+    """Count the number of unique days spent in each city and group by country."""
+    country_city_days = defaultdict(lambda: defaultdict(set))
+
+    for folder in data['folders']:
+        images = folder['images']
+        for image in images:
+            city = image['city']
+            country = image['country']
+            date = image['date']
+            if city != 'Unknown' and country != 'Unknown' and date != 'Unknown':
+                country_city_days[country][city].add(date)
+
+    # Convert sets to counts and find the first visit date for sorting
+    country_city_days_count = {}
+    for country, cities in country_city_days.items():
+        city_days_count = {city: len(dates) for city, dates in cities.items()}
+        # Convert date strings to datetime objects for comparison
+        first_visit_date = min(datetime.strptime(date, '%Y-%m-%d') for dates in cities.values() for date in dates)
+        country_city_days_count[country] = (first_visit_date, city_days_count)
+
+    return country_city_days_count
+
+def generate_summary(data):
+    """Generate summary data from the image metadata."""
+    country_city_days_count = count_days_in_cities(data)
+    
+    # Prepare data for JSON output
+    countries_data = []
+    for country, (first_visit_date, city_days_count) in country_city_days_count.items():
+        # Sort cities by visits (descending) and then by name (ascending)
+        sorted_cities = sorted(city_days_count.items(), key=lambda x: (-x[1], x[0]))
+        
+        # Convert cities dictionary to array of objects with consistent property names
+        cities_array = []
+        for city, days in sorted_cities:
+            cities_array.append({
+                "name": city,
+                "visits": days
+            })
+        
+        # Create country object
+        country_obj = {
+            "name": country,
+            "first_visit_date": first_visit_date.strftime('%Y-%m-%d'),
+            "cities": cities_array
+        }
+        countries_data.append(country_obj)
+    
+    # Sort countries by first visit date (oldest first) and then by name alphabetically
+    countries_data.sort(key=lambda x: (x["first_visit_date"], x["name"]))
+    
+    # Final output structure
+    output_data = {
+        "countries": countries_data
+    }
+    
+    return output_data
+
+def save_results(results, summary_data, output_file_base='public/output'):
+    """Save the processed data to JSON files."""
+    # Save main output file
+    main_output_file = f"{output_file_base}.json"
+    with open(main_output_file, 'w') as file:
+        json.dump(results, file, indent=4)
+    print(f"Main data saved to {main_output_file}")
+    
+    # Save summary output file
+    summary_output_file = f"{output_file_base}_summary.json"
+    with open(summary_output_file, 'w') as file:
+        json.dump(summary_data, file, indent=4)
+    print(f"Summary data saved to {summary_output_file}")
 
 def scan_images(directory, precision=1):
     """Scan for images recursively and extract metadata."""
@@ -264,22 +337,23 @@ def scan_images(directory, precision=1):
         "extracted_exifs_with_errors": exif_error_count
     }
     
-    # Combine summary, results, and error messages
+    # Convert from dictionary to array format and rename "results" to "folders"
+    folders_array = []
+    for folder_name, images in results.items():
+        folders_array.append({
+            "name": folder_name,
+            "images": images
+        })
+    
+    # Combine summary, folders, and error messages
     output_data = {
         "summary": summary,
-        "results": results,
+        "folders": folders_array,
         "errors": error_messages
     }
     
     print("\n\nImage scanning complete.")
     
-    # Save results as JSON to a file
-    json_filename = 'image_metadata.json'
-    with open(json_filename, 'w') as json_file:
-        json.dump(output_data, json_file, indent=4)
-    
-    print(f"JSON file '{json_filename}' created successfully.\n")
-
     print(f"Total running time: {elapsed_str}")
     print(f"Geocoder calls made: {geocoder_count}")
     print(f"Geocoder errors: {geocoder_error_count}")
@@ -288,10 +362,17 @@ def scan_images(directory, precision=1):
     print(f"Files with extracted EXIF: {extracted_exif_count}")
     print(f"Extracted EXIFs with errors: {exif_error_count}\n")
     
-    return results
+    return output_data
 
 if __name__ == "__main__":
-    directory = "/home/alex/Downloads/photos/doha"
+    directory = "/home/alex/Downloads/photos"
     print(f"Starting scan in directory: {directory}")
     image_data = scan_images(directory)
+    
+    # Generate summary based on the image data
+    summary_data = generate_summary(image_data)
+    
+    # Save both outputs
+    save_results(image_data, summary_data, 'public/output')
+    
     print("Processing complete.")
